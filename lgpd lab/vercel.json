@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/", "destination": "/apresentador.html" },
+    { "source": "/apresentador", "destination": "/apresentador.html" },
+    { "source": "/aluno", "destination": "/aluno.html" }
+  ]
+}

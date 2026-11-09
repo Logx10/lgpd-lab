@@ -1,0 +1,11 @@
+{
+  "name": "lgpd-lab-vercel",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "check": "node --check api/room.js && node --check public/app.js"
+  },
+  "engines": { "node": ">=20" }
+}
