@@ -12,14 +12,15 @@ O aluno entra por QR Code ou pelo código de 6 caracteres. O apresentador escolh
 1. Suba **o conteúdo desta pasta** para um repositório GitHub (os arquivos `api/`, `public/`, `package.json` e `vercel.json` devem estar na raiz do projeto).
 2. Na Vercel, clique em **Add New → Project → Import Git Repository**.
 3. Selecione **Framework Preset: Other**, **Root Directory: `./`** e deixe o **Build Command vazio**. Não é preciso instalar pacotes ou gerar uma pasta `dist`.
-4. Conecte um banco **Upstash Redis** (via Vercel Marketplace / Storage ou diretamente no Upstash). Copie as credenciais **REST** do banco.
-5. Em **Project → Settings → Environment Variables**, configure exatamente:
-   - `UPSTASH_REDIS_REST_URL` — URL HTTPS REST do Redis;
-   - `UPSTASH_REDIS_REST_TOKEN` — token privado REST do Redis.
-6. Configure as duas variáveis em **Production** (e **Preview**, se desejar testar previews). Clique **Redeploy** após adicionar as variáveis.
+4. Em **Storage → Create Database**, conecte um banco Redis ao projeto. A integração oficial **Redis** cria `REDIS_URL` automaticamente. Alternativamente, use **Upstash Redis** com as credenciais REST.
+5. Em **Project → Settings → Environment Variables**, confira as variáveis em **Production**:
+   - Redis oficial: `REDIS_URL` (URL privada de conexão);
+   - Upstash: `UPSTASH_REDIS_REST_URL` (URL HTTPS REST) e `UPSTASH_REDIS_REST_TOKEN` (token privado REST).
+   A API usa `REDIS_URL` quando ela está definida; caso contrário, usa as duas variáveis do Upstash.
+6. Clique **Redeploy** após conectar o banco ou adicionar variáveis. Configure **Preview** também se desejar testar previews.
 7. Acesse a raiz do domínio da Vercel, clique em **Criar sala para a turma** e compartilhe o QR Code. Os alunos podem abrir `https://seu-dominio.vercel.app/aluno` e digitar o código.
 
-> **Importante:** os dois valores Redis são segredos e devem existir apenas nas variáveis do servidor. **Não** os coloque no JavaScript ou HTML do navegador e **não** envie um arquivo `.env` para o GitHub.
+> **Importante:** `REDIS_URL` e o token REST do Upstash são segredos. Mantenha-os apenas nas variáveis do servidor. **Não** os coloque no JavaScript ou HTML do navegador e **não** envie um arquivo `.env` para o GitHub.
 
 Sem Redis, as interfaces estáticas abrem normalmente, mas **criar sala, responder e sincronizar não funcionam**. A API mostra um erro informando que é necessário configurar o serviço. A Vercel não fornece armazenamento compartilhado persistente entre funções automaticamente.
 
@@ -33,7 +34,7 @@ vercel login
 vercel link
 ```
 
-Crie um `.env.local` com as duas variáveis acima (ou execute `vercel env pull .env.local`) e depois:
+Crie um `.env.local` com `REDIS_URL` ou com as duas variáveis REST do Upstash (ou execute `vercel env pull .env.local`) e depois:
 
 ```bash
 vercel dev

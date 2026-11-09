@@ -1,4 +1,5 @@
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
+import { createClient } from 'redis';
 
 const TTL = 60 * 60 * 6;
 const stages = [
@@ -9,6 +10,7 @@ const allowedOrigins = ['GET', 'POST'];
 const sha = v => createHash('sha256').update(v).digest('hex');
 const redisKey = code => `lgpd:v1:room:${code}`;
 const votesKey = (code, stage) => `lgpd:v1:votes:${code}:${stage}`;
+let tcpClientPromise;
 function fail(res, status, error) { res.status(status).json({ error }); }
 function tokenValid(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string') return false;
@@ -19,10 +21,35 @@ function roomCode() {
   const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from(randomBytes(6)).map(n=>alphabet[n%alphabet.length]).join('');
 }
+async function tcpRedis(...cmd) {
+  if (!tcpClientPromise) {
+    const client = createClient({
+      url: process.env.REDIS_URL,
+      disableOfflineQueue: true,
+      socket: {
+        connectTimeout: 5000,
+        reconnectStrategy: retries => retries < 2 ? (retries + 1) * 250 : false
+      }
+    });
+    client.on('error', error => console.error('Redis TCP:', error.code || error.name));
+    client.on('terminated', () => {
+      tcpClientPromise = undefined;
+      queueMicrotask(() => client.destroy());
+    });
+    tcpClientPromise = client.connect().then(() => client).catch(error => {
+      tcpClientPromise = undefined;
+      client.destroy();
+      throw error;
+    });
+  }
+  const client = await tcpClientPromise;
+  return client.sendCommand(cmd.map(String));
+}
 async function redis(...cmd) {
+  if (process.env.REDIS_URL) return tcpRedis(...cmd);
   const base=process.env.UPSTASH_REDIS_REST_URL?.replace(/\/$/, '');
   const token=process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!base || !token) throw new Error('Redis não configurado. Conecte Upstash Redis à Vercel e defina as variáveis de ambiente.');
+  if (!base || !token) throw new Error('Redis não configurado. Defina REDIS_URL ou as credenciais REST do Upstash na Vercel.');
   const resp=await fetch(base, {method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify(cmd),signal:AbortSignal.timeout(8000)});
   if(!resp.ok) throw new Error('Falha de conexão com Redis.');
   const payload=await resp.json();

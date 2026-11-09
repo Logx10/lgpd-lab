@@ -2,9 +2,8 @@
 
 - [ ] Projeto importado na Vercel com `api/`, `public/`, `package.json`, `vercel.json` na raiz
 - [ ] Framework Preset = Other
-- [ ] Banco Upstash Redis criado e ativo
-- [ ] `UPSTASH_REDIS_REST_URL` definida em Production
-- [ ] `UPSTASH_REDIS_REST_TOKEN` definida em Production
+- [ ] Banco Redis criado e conectado ao projeto
+- [ ] `REDIS_URL` definida em Production **ou** as duas variáveis REST do Upstash definidas em Production
 - [ ] Deploy atualizado após adicionar variáveis
 - [ ] Página `/` abre painel do apresentador
 - [ ] Botão **Criar sala para a turma** gera código
