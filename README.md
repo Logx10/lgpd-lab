@@ -7,6 +7,8 @@ Aplicação de ensino com **duas telas diferentes**:
 
 O aluno entra por QR Code ou pelo código de 6 caracteres. O apresentador escolhe uma das **6 etapas**; os aparelhos atualizam automaticamente (consulta a cada 3 segundos). Cada aparelho pode alterar a resposta enquanto a etapa estiver aberta. O painel mostra resultados agregados em tempo real.
 
+No painel do apresentador, **Criar nova sala** gera outro código com contagem de respostas zerada. Os votos da sala anterior não aparecem na nova sala; o código anterior continua válido até expirar.
+
 ## Publicação na Vercel
 
 1. Suba **o conteúdo desta pasta** para um repositório GitHub (os arquivos `api/`, `public/`, `package.json` e `vercel.json` devem estar na raiz do projeto).

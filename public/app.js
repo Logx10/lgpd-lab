@@ -25,13 +25,15 @@ const option=(value,text,selected,multi=false)=>`<button class="option ${selecte
 function pollPause(){};
 async function sync(quiet=true){
  if(!client.room||client.busy) return;
+ const room=client.room;
  try {
-  const data=await api({code:client.room},'GET');
+  const data=await api({code:room},'GET');
+  if(room!==client.room) return;
   const moved=client.stage!==data.stage;
   client.roomData=data;client.live=true;client.error='';
   if(moved){client.stage=data.stage;client.selected=loadSelected();client.savedStage=loadSaved();if(!isPresenter)window.scrollTo({top:0,behavior:'smooth'});}
   render();
- }catch(e){client.live=false;client.error=e.message;if(!quiet)render();else if(client.roomData)render();}
+ }catch(e){if(room!==client.room)return;client.live=false;client.error=e.message;if(!quiet)render();else if(client.roomData)render();}
 }
 function localKey(extra){return `lgpd:${client.room}:${extra}`;}
 function loadSelected(){try{return JSON.parse(localStorage.getItem(localKey(`choice:${client.stage}`))||'[]')}catch{return []}}
@@ -45,7 +47,7 @@ function resultBars(){
 function showPresenterLive(){
  const stage=STAGES[client.stage],d=client.roomData;const qrcode=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(joinUrl())}`;
  return `<div class="intro"><div class="row between"><div><span class="phase">SALA ${esc(client.room)}</span><h1 style="margin:5px 0">Apresentação ao vivo</h1><p class="muted">Os alunos acompanham a etapa atual no EntregaFácil.</p></div><span class="badge">${client.live?'● Conectado':'● Reconectando'}</span></div></div>
- <div class="card live"><div class="row between" style="align-items:flex-start;flex-wrap:wrap"><div><span class="label">Código da sala</span><div class="roomcode">${esc(client.room)}</div><p class="small muted">Aponte a câmera do celular para o QR Code</p><button class="btn outline" id="copy">Copiar link do aluno</button></div><img class="qr" src="${qrcode}" alt="QR Code de acesso à sala; o endereço também pode ser copiado" loading="lazy"></div><p class="tiny url">${esc(joinUrl())}</p><div class="actionrow"><button class="btn outline" id="toggle">${d.opened?'Encerrar respostas':'Reabrir respostas'}</button><span class="pill">${d.opened?'🟢 Respostas abertas':'🔒 Respostas encerradas'}</span></div></div>
+ <div class="card live"><div class="row between" style="align-items:flex-start;flex-wrap:wrap"><div><span class="label">Código da sala</span><div class="roomcode">${esc(client.room)}</div><p class="small muted">Aponte a câmera do celular para o QR Code</p><button class="btn outline" id="copy">Copiar link do aluno</button></div><img class="qr" src="${qrcode}" alt="QR Code de acesso à sala; o endereço também pode ser copiado" loading="lazy"></div><p class="tiny url">${esc(joinUrl())}</p><div class="actionrow"><button class="btn outline" id="toggle">${d.opened?'Encerrar respostas':'Reabrir respostas'}</button><span class="pill">${d.opened?'🟢 Respostas abertas':'🔒 Respostas encerradas'}</span><button class="btn outline" id="new-room">Criar nova sala</button></div><p class="tiny muted" style="margin:12px 0 0">A nova sala começa sem respostas. O código anterior continua válido até a sala expirar.</p>${renderError()}</div>
  <div class="stage-nav">${STAGES.map((s,i)=>`<button class="btn ${i===client.stage?'':'outline'}" data-stage="${i}" ${i===client.stage?'aria-current="step"':''}>${i+1}. ${esc(s.title)}</button>`).join('')}</div>
  <div class="layout"><section class="stack"><div class="card"><span class="label">ETAPA ${client.stage+1} / 6</span><h2 style="margin:12px 0">${stage.emoji} ${esc(stage.title)}</h2><p class="phase">${esc(stage.eyebrow)}</p><p class="question">${esc(stage.question)}</p><div class="actionrow"><button class="btn" id="reveal">${client.revealed[client.stage]?'Ocultar explicação':'Revelar explicação jurídica'}</button>${client.stage<5?`<button class="btn outline" data-stage="${client.stage+1}">Próxima etapa →</button>`:'<button class="btn outline" data-stage="0">Voltar ao início ↺</button>'}</div></div>${client.revealed[client.stage]?`<div class="card"><h3>O que diz a LGPD?</h3><p>${esc(stage.explanation)}</p><p class="phase">${esc(stage.cite)}</p><div class="note"><strong>Para debater:</strong><p style="margin:6px 0 0">${esc(stage.discussion)}</p></div></div>`:`<div class="card"><h3>Condução sugerida</h3><p>Leia a situação, abra uma discussão curta e peça que a turma vote antes de exibir a explicação.</p><p class="muted small">As perguntas apresentam cenários didáticos, não pareceres jurídicos sobre casos concretos.</p></div>`}</section>
  <aside class="stack"><div class="card">${resultBars()}</div><div class="card"><h3>Fontes oficiais</h3><p class="source"><a href="${LAW}" target="_blank" rel="noopener">Lei nº 13.709/2018 — LGPD ↗</a></p><p class="source"><a href="${ANPD}" target="_blank" rel="noopener">Caso real: primeira multa ANPD ↗</a></p><p class="tiny muted">Ao final, destaque que o EntregaFácil e os votos desta apresentação são simulações educacionais.</p></div><div class="card"><h3>Privacidade da atividade</h3><p class="small muted">O sistema registra apenas um identificador aleatório por navegador e a resposta de cada etapa. O código da sala não dá acesso aos controles do apresentador.</p></div></aside></div>`;
@@ -64,6 +66,7 @@ function render(){
  root.innerHTML=isPresenter?(client.roomData?showPresenterLive():showPresenterStart()):(client.roomData?showStudentLive():showStudentJoin());
  if(isPresenter){
   root.querySelector('#create')?.addEventListener('click',createRoom);
+  root.querySelector('#new-room')?.addEventListener('click',createRoom);
   root.querySelector('#reveal')?.addEventListener('click',()=>{client.revealed[client.stage]=!client.revealed[client.stage];render();});
   root.querySelector('#copy')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(joinUrl());const el=root.querySelector('#copy');el.textContent='Link copiado ✓';}catch{prompt('Copie o endereço:',joinUrl());}});
   root.querySelector('#toggle')?.addEventListener('click',()=>adminAction('toggle'));
@@ -76,7 +79,18 @@ function render(){
   root.querySelector('#send')?.addEventListener('click',sendVote);
  }
 }
-async function createRoom(){client.busy=true;client.error='';try{const d=await api({action:'create'});client.room=d.code;client.secret=d.secret;localStorage.setItem('lgpd-presenter-room',client.room);localStorage.setItem('lgpd-presenter-secret',client.secret);client.busy=false;await sync(false);}catch(e){client.error=e.message;}finally{client.busy=false;render();}}
+async function createRoom(){
+ if(client.busy)return;
+ client.busy=true;client.error='';
+ try{
+  const d=await api({action:'create'});
+  client.room=d.code;client.secret=d.secret;client.stage=-1;client.roomData=null;
+  client.selected=[];client.savedStage=-1;client.revealed={};client.live=false;
+  localStorage.setItem('lgpd-presenter-room',client.room);
+  localStorage.setItem('lgpd-presenter-secret',client.secret);
+  client.busy=false;await sync(false);
+ }catch(e){client.error=e.message;}finally{client.busy=false;render();}
+}
 async function adminAction(action,stage){client.busy=true;try{await api({action,code:client.room,...(action==='advance'?{stage}:{})});client.error='';client.busy=false;await sync(false);}catch(e){client.error=e.message;client.busy=false;render();}}
 async function joinRoom(){const raw=root.querySelector('#room-input')?.value||client.room;client.room=raw.toUpperCase().replace(/\s/g,'');client.error='';localStorage.setItem('lgpd-student-room',client.room);try{await sync(false);if(client.roomData)history.replaceState(null,'',`/aluno?sala=${encodeURIComponent(client.room)}`);}catch(e){client.error=e.message;}render();}
 async function sendVote(){if(client.busy||!client.selected.length)return;client.busy=true;client.error='';try{await api({action:'vote',code:client.room,participant:client.participant,stage:client.stage,answer:STAGES[client.stage].multi?{selected:client.selected}:{choice:client.selected[0]}});client.savedStage=client.stage;localStorage.setItem(localKey('sent'),String(client.stage));}catch(e){client.error=e.message;}finally{client.busy=false;render();}}
